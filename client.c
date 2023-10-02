@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 
 #define PORT 8080
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "192.168.237.145"
 
 void error(char *message) {
     perror(message);
@@ -82,6 +82,7 @@ int main() {
         error("Không thể kết nối đến server");
     }
 
+
     while (1) {
         // Nhập lựa chọn
         printf("Lựa chọn:\n");
@@ -94,33 +95,58 @@ int main() {
         clearInputBuffer(); // Consume newline characters
 
         switch (choice) {
-            case 1:
+            case 1: {
+                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                 listFiles(socket_fd);
                 break;
+                }
             case 2: {
-                // Nhập tên tệp cần tải
-                char filename[256];
-                printf("Nhập tên tệp cần tải hoặc 'quit' để thoát: ");
-                fgets(filename, sizeof(filename), stdin);
+                int t = 0;
+                char request[] = "list";
+                send(socket_fd, request, strlen(request) + 1, 0);
+                SendFileList receiveList;
+                recv(socket_fd, &receiveList, sizeof(receiveList), 0);
+                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+                while (t == 0) {
+                    // Nhập tên tệp cần tải
+                    char filename[256];
+                    printf("Nhập tên tệp cần tải hoặc 'quit' để thoát: ");
+                    fgets(filename, sizeof(filename), stdin);
 
-                // Loại bỏ ký tự newline nếu có
-                size_t len = strlen(filename);
-                if (len > 0 && filename[len - 1] == '\n') {
-                    filename[len - 1] = '\0';
+                    // Loại bỏ ký tự newline nếu có
+                    size_t len = strlen(filename);
+                    if (len > 0 && filename[len - 1] == '\n') {
+                        filename[len - 1] = '\0';
+                    }
+
+                    // Kiểm tra nếu người dùng muốn thoát
+                    if (strcmp(filename, "quit") == 0) {
+                        break;
+                    }
+
+                    // Kiểm tra xem tên tệp có tồn tại trong danh sách
+                    int found = 0;
+                    for (int i = 0; i < receiveList.num_files; i++) {
+                        if (strcmp(receiveList.filenames[i], filename) == 0) {
+                            found = 1;
+                            break;
+                        }
+                    }
+
+                    if (found) {
+                        // Gửi tên tệp đến server và nhận tệp từ server
+                        send(socket_fd, filename, strlen(filename) + 1, 0);
+                        receiveFile(socket_fd, filename);
+                        t = 1;
+                    } else {
+                        printf("Tệp không tồn tại. Vui lòng thử lại.\n");
+                    }
                 }
-
-                // Kiểm tra nếu người dùng muốn thoát
-                if (strcmp(filename, "quit") == 0) {
-                    break;
-                }
-
-                // Gửi tên tệp đến server
-                send(socket_fd, filename, strlen(filename) + 1, 0);
-
-                // Nhận tệp từ server
-                receiveFile(socket_fd, filename);
                 break;
             }
+
             case 3:
                 close(socket_fd);
                 exit(0);
