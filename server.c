@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <sys/stat.h>
+
 
 #define PORT 8080
 #define FILE_PATH "files/"
