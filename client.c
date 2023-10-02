@@ -20,7 +20,7 @@ typedef struct {
 
 void receiveFile(int socket_fd, char *filename) {
     char filepath[256];
-    snprintf(filepath, sizeof(filepath), "received_%s", filename);
+    snprintf(filepath, sizeof(filepath), "%s", filename);
 
     FILE *file = fopen(filepath, "wb"); // Thay đổi chế độ mở tệp thành "wb"
     if (file == NULL) {
