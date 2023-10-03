@@ -66,10 +66,9 @@ int main() {
     int socket_fd;
     struct sockaddr_in server_addr;
 
-    // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    // Khởi tạo thông tin của server
+
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
@@ -127,7 +126,7 @@ int main() {
                         }
                     }
 
-                    if (found) {
+                    if (find) {
                         send(socket_fd, filename, strlen(filename) + 1, 0);
                         receiveFile(socket_fd, filename);
                         t = 1;
