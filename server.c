@@ -77,7 +77,6 @@ void *client_handler(void *arg) {
     char buffer[1024];
     ssize_t bytesRead;
 
-    // Nhận yêu cầu từ client
     bytesRead = recv(client_socket, buffer, sizeof(buffer), 0);
     if (bytesRead <= 0) {
         close(client_socket);
@@ -105,39 +104,36 @@ int main() {
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
 
-    // Tạo thư mục "files" để lưu trữ các tệp
-    // mkdir(FILE_PATH, 0777);
-
-    // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    
-    // Khởi tạo thông tin của server
+    if (socket_fd == -1) {
+        error("Không thể tạo socket");
+    }
+
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
-    // Ràng buộc socket đến địa chỉ và cổng
-    bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if (bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        error("Không thể ràng buộc socket");
+    }
 
-    // Lắng nghe kết nối
-    listen(socket_fd, 5)
+    if (listen(socket_fd, 5) == -1) {
+        error("Không thể lắng nghe kết nối");
+    }
 
     printf("Đang chờ kết nối...\n");
 
-    // Chấp nhận và xử lý kết nối từ client
     while (1) {
         client_socket = accept(socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
         if (client_socket == -1) {
             error("Không thể chấp nhận kết nối");
         }
 
-        // Tạo một luồng mới để xử lý client
         pthread_t thread;
         if (pthread_create(&thread, NULL, client_handler, &client_socket) != 0) {
             error("Không thể tạo luồng mới");
         }
 
-        // Giải phóng tài nguyên luồng sau khi hoàn thành
         pthread_detach(thread);
     }
 
