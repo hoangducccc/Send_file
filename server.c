@@ -106,28 +106,21 @@ int main() {
     socklen_t client_addr_len = sizeof(client_addr);
 
     // Tạo thư mục "files" để lưu trữ các tệp
-    mkdir(FILE_PATH, 0777);
+    // mkdir(FILE_PATH, 0777);
 
     // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_fd == -1) {
-        error("Không thể tạo socket");
-    }
-
+    
     // Khởi tạo thông tin của server
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
     // Ràng buộc socket đến địa chỉ và cổng
-    if (bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        error("Không thể ràng buộc socket");
-    }
+    bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     // Lắng nghe kết nối
-    if (listen(socket_fd, 5) == -1) {
-        error("Không thể lắng nghe kết nối");
-    }
+    listen(socket_fd, 5)
 
     printf("Đang chờ kết nối...\n");
 
