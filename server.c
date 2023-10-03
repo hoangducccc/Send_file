@@ -106,7 +106,7 @@ int main() {
     socklen_t client_addr_len = sizeof(client_addr);
 
     // Tạo thư mục "files" để lưu trữ các tệp
-    mkdir(FILE_PATH, 0777);
+    // mkdir(FILE_PATH, 0777);
 
     // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
