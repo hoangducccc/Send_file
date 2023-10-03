@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 
 #define PORT 8080
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "192.168.237.145"
 
 void error(char *message) {
     perror(message);
@@ -22,7 +22,7 @@ void receiveFile(int socket_fd, char *filename) {
     char filepath[256];
     snprintf(filepath, sizeof(filepath), "%s", filename);
 
-    FILE *file = fopen(filepath, "wb"); // Thay đổi chế độ mở tệp thành "wb"
+    FILE *file = fopen(filepath, "wb");
     if (file == NULL) {
         error("Không thể tạo tệp");
     }
@@ -68,19 +68,16 @@ int main() {
 
     // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_fd == -1) {
-        error("Không thể tạo socket");
-    }
 
     // Khởi tạo thông tin của server
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
 
-    // Kết nối đến server
     if (connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         error("Không thể kết nối đến server");
     }
+
 
     while (1) {
         // Nhập lựa chọn
@@ -90,37 +87,57 @@ int main() {
         printf("3. Thoát\n");
 
         int choice;
-        scanf("%d", &choice);
-        clearInputBuffer(); // Consume newline characters
+        scanf("Vui lòng nhập lựa chọn của bạn: %d", &choice);
+        clearInputBuffer();
 
         switch (choice) {
-            case 1:
+            case 1: {
+                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                 listFiles(socket_fd);
                 break;
+                }
             case 2: {
-                // Nhập tên tệp cần tải
-                char filename[256];
-                printf("Nhập tên tệp cần tải hoặc 'quit' để thoát: ");
-                fgets(filename, sizeof(filename), stdin);
+                int t = 0;
+                char request[] = "list";
+                send(socket_fd, request, strlen(request) + 1, 0);
+                SendFileList receiveList;
+                recv(socket_fd, &receiveList, sizeof(receiveList), 0);
+                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+                while (t == 0) {
+                    char filename[256];
+                    printf("Nhập tên file cần tải hoặc 'quit' để thoát: ");
+                    fgets(filename, sizeof(filename), stdin);
 
-                // Loại bỏ ký tự newline nếu có
-                size_t len = strlen(filename);
-                if (len > 0 && filename[len - 1] == '\n') {
-                    filename[len - 1] = '\0';
+                    size_t len = strlen(filename);
+                    if (len > 0 && filename[len - 1] == '\n') {
+                        filename[len - 1] = '\0';
+                    }
+
+                    if (strcmp(filename, "quit") == 0) {
+                        break;
+                    }
+
+                    int find = 0;
+                    for (int i = 0; i < receiveList.num_files; i++) {
+                        if (strcmp(receiveList.filenames[i], filename) == 0) {
+                            find = 1;
+                            break;
+                        }
+                    }
+
+                    if (found) {
+                        send(socket_fd, filename, strlen(filename) + 1, 0);
+                        receiveFile(socket_fd, filename);
+                        t = 1;
+                    } else {
+                        printf("Tệp không tồn tại. Vui lòng thử lại.\n");
+                    }
                 }
-
-                // Kiểm tra nếu người dùng muốn thoát
-                if (strcmp(filename, "quit") == 0) {
-                    break;
-                }
-
-                // Gửi tên tệp đến server
-                send(socket_fd, filename, strlen(filename) + 1, 0);
-
-                // Nhận tệp từ server
-                receiveFile(socket_fd, filename);
                 break;
             }
+
             case 3:
                 close(socket_fd);
                 exit(0);
