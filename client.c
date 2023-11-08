@@ -99,11 +99,11 @@ int main() {
             case 2: {
                 int t = 0;
                 char request[] = "list";
+                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                 send(socket_fd, request, strlen(request) + 1, 0);
                 SendFileList receiveList;
                 recv(socket_fd, &receiveList, sizeof(receiveList), 0);
-                socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-                connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                 while (t == 0) {
                     char filename[256];
                     printf("Nhập tên file cần tải hoặc 'quit' để thoát: ");
