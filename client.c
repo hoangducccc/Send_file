@@ -86,7 +86,7 @@ int main() {
         printf("3. Thoát\n");
 
         int choice;
-        scanf("Vui lòng nhập lựa chọn của bạn: %d", &choice);
+        scanf("%d", &choice);
         clearInputBuffer();
 
         switch (choice) {
