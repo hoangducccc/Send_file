@@ -8,8 +8,9 @@
 #include <sys/stat.h>
 
 
-#define PORT 8080
+#define PORT 8081
 #define FILE_PATH "files/"
+#define PASSWORD "bungbu"
 
 void error(char *message) {
     perror(message);
@@ -23,19 +24,30 @@ typedef struct {
 
 void sendFile(int client_socket, char *filename) {
     char filepath[256];
+    size_t bytesRead;
+    //printf("%s", filename);
     snprintf(filepath, sizeof(filepath), "%s%s", FILE_PATH, filename);
 
-    FILE *file = fopen(filepath, "rb");
+    FILE *file = fopen(filepath, "rb");  // Mở file để đọc dưới dạng binary
     if (file == NULL) {
-        error("Không thể mở tệp");
+        perror("Không thể mở tệp");
+        exit(EXIT_FAILURE);
     }
 
     char buffer[1024];
-    ssize_t bytesRead;
 
     while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-        if (send(client_socket, buffer, bytesRead, 0) == -1) {
-            error("Lỗi khi gửi dữ liệu");
+        ssize_t bytesSent = send(client_socket, buffer, bytesRead, 0);
+        if (bytesSent == -1) {
+            perror("Lỗi khi gửi dữ liệu");
+            fclose(file);
+            exit(EXIT_FAILURE);
+        }
+        // Kiểm tra xem đã gửi đúng số byte hay không
+        if ((size_t)bytesSent != bytesRead) {
+            perror("Gửi không đủ dữ liệu");
+            fclose(file);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -67,84 +79,127 @@ void listFiles(int client_socket) {
     }
 }
 
+void receiveFile(int client_socket, char *filename) {
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "%s%s", FILE_PATH, filename);
+
+    FILE *file = fopen(filepath, "wb");  // Mở file để ghi dưới dạng binary
+    if (file == NULL) {
+        perror("Không thể tạo tệp");
+        exit(EXIT_FAILURE);
+    }
+
+    char buffer[1024];
+    ssize_t bytesRead;
+
+    while (1) {
+        bytesRead = recv(client_socket, buffer, sizeof(buffer), 0);
+        if (bytesRead <= 0) {
+            break;
+        }
+        size_t bytesWritten = fwrite(buffer, 1, bytesRead, file);
+        if (bytesWritten != bytesRead) {
+            perror("Write to file failed");
+            fclose(file);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    fclose(file);
+    printf("Đã nhận tệp %s\n", filename);
+}
+
 void clearInputBuffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+void upload_confirm(int client_socket) {
+    char request[1024] = "upload";
+    send(client_socket, request, strlen(request) + 1, 0); 
+}
+
 void *client_handler(void *arg) {
     int client_socket = *((int *)arg);
     char buffer[1024];
+    char filename[1024];
+    //char request[1024] = "upload";
     ssize_t bytesRead;
+    size_t length_password = strlen(PASSWORD);
 
-    // Nhận yêu cầu từ client
+    // Khởi tạo buffer và filename
+    memset(buffer, 0, sizeof(buffer));
+    memset(filename, 0, sizeof(filename));
+
     bytesRead = recv(client_socket, buffer, sizeof(buffer), 0);
     if (bytesRead <= 0) {
         close(client_socket);
         pthread_exit(NULL);
     }
 
-    // Loại bỏ ký tự newline (nếu có)
-    if (buffer[bytesRead - 1] == '\n') {
-        buffer[bytesRead - 1] = '\0';
-    }
+    // Loại bỏ ký tự newline (nếu có) và đảm bảo kết thúc chuỗi
+    // buffer[bytesRead] = '\0';
+    // if (buffer[bytesRead - 1] == '\n') {
+    //     buffer[bytesRead - 1] = '\0';
+    // }
+    printf("%s",buffer);
 
     if (strcmp(buffer, "list") == 0) {
         listFiles(client_socket);
-    } else {
-        // Gửi tệp cho client
-        sendFile(client_socket, buffer);
+    } else if (strncmp(buffer, "send", 4) == 0) {
+        strcpy(filename, buffer + 4);
+        sendFile(client_socket, filename);
+    } else if (strncmp(buffer, "upload", 6) == 0) {
+        strcpy(buffer, buffer + 6);
+        if (strncmp(buffer, PASSWORD, length_password) == 0){
+            //upload_confirm(client_socket);
+            strcpy(buffer, buffer + length_password);
+            receiveFile(client_socket, buffer);
+        }
     }
+
+    
 
     close(client_socket);
     pthread_exit(NULL);
 }
+
 
 int main() {
     int socket_fd, client_socket;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
 
-    // Tạo thư mục "files" để lưu trữ các tệp
-    // mkdir(FILE_PATH, 0777);
-
-    // Tạo socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
         error("Không thể tạo socket");
     }
 
-    // Khởi tạo thông tin của server
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
-    // Ràng buộc socket đến địa chỉ và cổng
     if (bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         error("Không thể ràng buộc socket");
     }
 
-    // Lắng nghe kết nối
     if (listen(socket_fd, 5) == -1) {
         error("Không thể lắng nghe kết nối");
     }
 
     printf("Đang chờ kết nối...\n");
 
-    // Chấp nhận và xử lý kết nối từ client
     while (1) {
         client_socket = accept(socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
         if (client_socket == -1) {
             error("Không thể chấp nhận kết nối");
         }
 
-        // Tạo một luồng mới để xử lý client
         pthread_t thread;
         if (pthread_create(&thread, NULL, client_handler, &client_socket) != 0) {
             error("Không thể tạo luồng mới");
         }
 
-        // Giải phóng tài nguyên luồng sau khi hoàn thành
         pthread_detach(thread);
     }
 
