@@ -31,3 +31,8 @@ Chạy chương trình bên server
 ```
 ./client
 ```
+## Lưu ý
+Có thể thử nghiệm trên một máy vật lý, tuy nhiên phải tạo hai thư mục client và server khác nhau để lưu chương trình, thay địa chỉ ip của server là 127.0.0.1 trong client.c
+```
+#define SERVER_IP "20.78.13.17"
+```
