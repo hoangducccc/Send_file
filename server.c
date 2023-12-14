@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define PORT 8081
+#define PORT 8080
 #define FILE_PATH "files/"
 #define PASSWORD "bungbu"
 
@@ -138,9 +138,16 @@ void upload_confirm(int client_socket)
     send(client_socket, request, strlen(request) + 1, 0);
 }
 
+
 void upload_refuse(int client_socket)
 {
     char request[1024] = "refuse_to_upload";
+    send(client_socket, request, strlen(request) + 1, 0);
+}
+
+void lets_upload(int client_socket)
+{
+    char request[1024] = "let's_upload";
     send(client_socket, request, strlen(request) + 1, 0);
 }
 
@@ -215,6 +222,7 @@ void *client_handler(void *arg)
     else if (strncmp(buffer, PASSWORD, length_password) == 0)
     {
         strcpy(buffer, buffer + length_password);
+        lets_upload(client_socket);
         receiveFile(client_socket, buffer);
     }
     else
