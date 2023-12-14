@@ -6,8 +6,8 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 
-#define PORT 8081
-#define SERVER_IP "127.0.0.1"
+#define PORT 8080
+#define SERVER_IP "20.243.200.206"
 #define FILE_PATH "files/"
 
 void error(char *message)
@@ -134,6 +134,31 @@ int upload_confirm(int socket_fd)
         return 0;
     }
 }
+
+int lets_upload(int socket_fd)
+{
+    char buffer[1024];
+    ssize_t bytesRead;
+    int t = 1;
+
+    bytesRead = recv(socket_fd, buffer, sizeof(buffer), 0);
+    if (bytesRead <= 0)
+    {
+        close(socket_fd);
+    }
+    if (strcmp(buffer, "let's_upload") == 0)
+    {
+        printf("Done\n");
+        return 1;
+    }
+    else
+    {
+        printf("False\n");
+        return 0;
+    }
+}
+
+
 
 char **list_files_upload(int *num_files)
 {
@@ -333,7 +358,7 @@ int main()
                             a = 0;
                             snprintf(request, sizeof(request), "%s%s", password, fileList[i]);
                             send(socket_fd, request, strlen(request) + 1, 0);
-                            // sleep(1);
+                            //sleep(1);
                             // char buffer[1024];
                             // ssize_t bytesRead;
                             // memset(buffer, 0, sizeof(buffer));
@@ -347,9 +372,10 @@ int main()
                             //     printf("%s", buffer);
                             //     upload_file(socket_fd, fileList[i]);
                             // }
-
+			                //sleep(1);
+                            if (lets_upload(socket_fd) == 1){
                             upload_file(socket_fd, fileList[i]);
-                            printf("Done\n");
+                            printf("Done\n");}
                             close(socket_fd);
                             break;
                         }
