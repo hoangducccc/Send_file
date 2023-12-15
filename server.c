@@ -27,13 +27,12 @@ void sendFile(int client_socket, char *filename)
 {
     char filepath[256];
     size_t bytesRead;
-    // printf("%s", filename);
     snprintf(filepath, sizeof(filepath), "%s%s", FILE_PATH, filename);
 
-    FILE *file = fopen(filepath, "rb"); // Mở file để đọc dưới dạng binary
+    FILE *file = fopen(filepath, "rb");
     if (file == NULL)
     {
-        perror("Không thể mở tệp");
+        perror("Unable to open the file.");
         exit(EXIT_FAILURE);
     }
 
@@ -44,14 +43,13 @@ void sendFile(int client_socket, char *filename)
         ssize_t bytesSent = send(client_socket, buffer, bytesRead, 0);
         if (bytesSent == -1)
         {
-            perror("Lỗi khi gửi dữ liệu");
+            perror("Error while sending data.");
             fclose(file);
             exit(EXIT_FAILURE);
         }
-        // Kiểm tra xem đã gửi đúng số byte hay không
         if ((size_t)bytesSent != bytesRead)
         {
-            perror("Gửi không đủ dữ liệu");
+            perror("Not enough data sent.");
             fclose(file);
             exit(EXIT_FAILURE);
         }
@@ -67,7 +65,7 @@ void listFiles(int client_socket)
 
     if (dr == NULL)
     {
-        error("Không thể mở thư mục");
+        error("Unable to open the folder");
     }
 
     SendFileList fileList;
@@ -86,7 +84,7 @@ void listFiles(int client_socket)
 
     if (send(client_socket, &fileList, sizeof(fileList), 0) == -1)
     {
-        error("Lỗi khi gửi danh sách tệp");
+        error("Error while sending the list of files.");
     }
 }
 
@@ -95,10 +93,10 @@ void receiveFile(int client_socket, char *filename)
     char filepath[256];
     snprintf(filepath, sizeof(filepath), "%s%s", FILE_PATH, filename);
 
-    FILE *file = fopen(filepath, "wb"); // Mở file để ghi dưới dạng binary
+    FILE *file = fopen(filepath, "wb");
     if (file == NULL)
     {
-        perror("Không thể tạo tệp");
+        perror("Unable to create file.");
         exit(EXIT_FAILURE);
     }
 
@@ -122,7 +120,6 @@ void receiveFile(int client_socket, char *filename)
     }
 
     fclose(file);
-    printf("Đã nhận %s", filename);
 }
 
 void clearInputBuffer()
@@ -156,11 +153,9 @@ void *client_handler(void *arg)
     int client_socket = *((int *)arg);
     char buffer[1024];
     char filename[1024];
-    // char request[1024] = "upload";
     ssize_t bytesRead;
     size_t length_password = strlen(PASSWORD);
 
-    // Khởi tạo buffer và filename
     memset(buffer, 0, sizeof(buffer));
     memset(filename, 0, sizeof(filename));
 
@@ -171,12 +166,6 @@ void *client_handler(void *arg)
         pthread_exit(NULL);
     }
 
-    // Loại bỏ ký tự newline (nếu có) và đảm bảo kết thúc chuỗi
-    // buffer[bytesRead] = '\0';
-    // if (buffer[bytesRead - 1] == '\n') {
-    //     buffer[bytesRead - 1] = '\0';
-    // }
-    // printf("%s",buffer);
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     getpeername(client_socket, (struct sockaddr *)&client_addr, &addr_len);
@@ -204,15 +193,11 @@ void *client_handler(void *arg)
         strcpy(buffer, buffer + 6);
         if (strncmp(buffer, PASSWORD, length_password) == 0)
         {
-            // upload_confirm(client_socket);
             strcpy(buffer, buffer + length_password);
             if (strlen(buffer) == 0)
             {
                 upload_confirm(client_socket);
             }
-            // else {
-            //     upload_refuse(client_socket);
-            // }
         }
         else
         {
@@ -243,7 +228,7 @@ int main()
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1)
     {
-        error("Không thể tạo socket");
+        error("Unable to create socket.");
     }
 
     server_addr.sin_family = AF_INET;
@@ -252,28 +237,28 @@ int main()
 
     if (bind(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
     {
-        error("Không thể ràng buộc socket");
+        error("Unable to bind the socket.");
     }
 
     if (listen(socket_fd, 5) == -1)
     {
-        error("Không thể lắng nghe kết nối");
+        error("Unable to listen for connections.");
     }
 
-    printf("Đang chờ kết nối...\n");
+    printf("Waiting for connection...\n");
 
     while (1)
     {
         client_socket = accept(socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
         if (client_socket == -1)
         {
-            error("Không thể chấp nhận kết nối");
+            error("Unable to accept connection.");
         }
 
         pthread_t thread;
         if (pthread_create(&thread, NULL, client_handler, &client_socket) != 0)
         {
-            error("Không thể tạo luồng mới");
+            error("Unable to create a new thread.");
         }
 
         pthread_detach(thread);
